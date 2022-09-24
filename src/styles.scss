@@ -1,0 +1,19 @@
+/* Add application styles & imports to this file! */
+.graph-axis path,
+.graph-axis line {
+  fill: none;
+  stroke: #8997b1;
+  stroke-width: 2px;
+  shape-rendering: crispEdges;
+}
+.graph-axis text {
+  fill: #8997b1;
+}
+.y-axis-grid line {
+  stroke: #1f2f48;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+.y-axis-grid .domain {
+  stroke: #0e1a30;
+}
