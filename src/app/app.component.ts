@@ -10,6 +10,10 @@ export class AppComponent implements OnInit {
   maxAllowed = 0;
   graphData = [
     {
+      hrCount: 0,
+      adjCount: 0,
+    },
+    {
       hrCount: 4,
       adjCount: 2,
     },
@@ -86,7 +90,7 @@ export class AppComponent implements OnInit {
   transitionTime: 1500;
 
   ngOnInit() {
-    this.maxAllowed = d3.max(this.graphData, (d: any) => d.hrCount) + 5;
+    this.maxAllowed = d3.max(this.graphData, (d: any) => d.hrCount);
     this.drawLineGraph();
   }
 
@@ -129,7 +133,7 @@ export class AppComponent implements OnInit {
       .append('svg')
       .attr('width', this.width + this.margin.left + this.margin.right)
       .attr('height', this.height + this.margin.top + this.margin.bottom)
-      .style('background-color', '#0e1a30')
+      .style('background-color', 'none')
       .append('g')
       .attr(
         'transform',
@@ -140,8 +144,10 @@ export class AppComponent implements OnInit {
   createScale(): void {
     // x-scale
     this.xScale = d3
-      .scaleBand()
-      .domain(this.graphData.map((d: any) => d.hrCount))
+      /* .scaleBand() */
+      /* .domain(this.graphData.map((d: any) => d.hrCount)) */
+      .scaleLinear()
+      .domain([0, d3.max(this.graphData, (d: any) => d.hrCount)])
       .range([0, this.width]);
 
     // y-scale
@@ -156,15 +162,18 @@ export class AppComponent implements OnInit {
       .append('g')
       .attr('class', 'y-axis-grid')
       .call(
-        d3.axisLeft(this.yScale).tickSize(-this.width).tickFormat('').ticks(5)
-      );
+        d3.axisLeft(this.yScale).tickSize(-this.width).tickFormat('').ticks(2)
+      )
+      .selectAll('line')
+      .style('stroke', 'red')
+      .style('stroke-dasharray', '4');
   }
 
   createShadowEffect(): void {
     const colorArray = [
       ['rgb(8, 141, 218)', '0.8'],
       ['rgb(8, 141, 218)', '0.5'],
-      ['rgb(8, 141, 218)', '0'],
+      ['rgb(8, 141, 218)', '0.2'],
     ];
     const defs = this.g.append('defs');
     const grad = defs
@@ -197,10 +206,9 @@ export class AppComponent implements OnInit {
 
     this.g
       .append('path')
-      //.attr("d", area(this.graphData, false))
       .attr('fill', 'url(#grad)')
       .transition()
-      .duration(5000)
+      .duration(1500)
       .attrTween('d', function (d) {
         var p = d3.select('.line').node(),
           l = p.getTotalLength(),
@@ -215,7 +223,19 @@ export class AppComponent implements OnInit {
 
   createAxis(): void {
     // x-axis
-    this.xAxis = d3.axisBottom(this.xScale).tickSizeOuter(0);
+    /* const xJump = 10;
+    const xMax = Math.max(...this.graphData.map((d) => d.hrCount));
+    let xRange = []; */
+    /* for (let i = 0; i < xMax; i++) {
+      xRange.push(i);
+    } */
+    /* if (xMax !== xRange[-1]) xRange.push(xMax); */
+
+    this.xAxis = d3
+      .axisBottom(this.xScale)
+      /* .tickValues([0, 25, 50, 75, 100]) */
+      .ticks(3)
+      .tickSizeOuter(0);
     this.g
       .append('g')
       .attr('transform', 'translate(0, ' + this.height + ')')
@@ -231,10 +251,10 @@ export class AppComponent implements OnInit {
       .text('Hours');
 
     // y-axis
-    this.yAxis = d3.axisLeft(this.yScale).ticks(5).tickSizeOuter(0);
+    this.yAxis = d3.axisLeft(this.yScale).ticks(3).tickSizeOuter(0);
     this.g
       .append('g')
-      .attr('class', 'graph-axis y-axis-tick')
+      .attr('class', 'graph-axis')
       .call(this.yAxis.scale(this.yScale))
       .append('text')
       .attr('transform', 'rotate(-90)')
@@ -250,7 +270,8 @@ export class AppComponent implements OnInit {
   createDataPathAndDots(): void {
     const line = d3
       .line()
-      .x((d: any) => this.xScale(d.hrCount) + this.xScale.bandwidth() / 2)
+      .x((d: any) => this.xScale(d.hrCount))
+      /* .x((d: any) => this.xScale(d.hrCount) + this.xScale.bandwidth() / 2) */
       .y((d: any) => this.yScale(d.adjCount));
     const path = this.g
       .append('path')
@@ -259,37 +280,12 @@ export class AppComponent implements OnInit {
       .attr('stroke', '#088dda')
       .attr('stroke-width', '2px')
       .attr('d', line(this.graphData));
-    this.createPathTransition(path);
 
-    // Data dots
-    /*  this.g
-      .selectAll("line-circle")
-      .data(this.graphData)
-      .enter()
-      .append("circle")
-      .attr("r", 4)
-      .attr("fill", (d: any) => {
-        if (d.hrCount === 0) {
-          return "none";
-        } else {
-          return "#088dda";
-        }
-      })
-      .attr(
-        "cx",
-        (d: any) => this.xScale(d.hrCount) + this.xScale.bandwidth() / 2
-      )
-      .attr("cy", (d: any) => this.yScale(d.adjCount)); */
-  }
-
-  createPathTransition(path: any): void {
+    /* Transition */
     const totLength = path.node().getTotalLength();
     path
       .attr('stroke-dasharray', totLength + ' ' + totLength)
       .attr('stroke-dashoffset', totLength);
-    path
-      .transition()
-      .duration(this.transitionTime)
-      .attr('stroke-dashoffset', 0);
+    path.transition().duration(1500).attr('stroke-dashoffset', 0);
   }
 }
