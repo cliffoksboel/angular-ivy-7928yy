@@ -15,15 +15,15 @@ export class AppComponent implements OnInit {
     },
     {
       hrCount: 4,
-      adjCount: 2,
+      adjCount: -2,
     },
     {
       hrCount: 8,
-      adjCount: 5,
+      adjCount: -5,
     },
     {
       hrCount: 12,
-      adjCount: 10,
+      adjCount: -10,
     },
     {
       hrCount: 16,
@@ -87,6 +87,7 @@ export class AppComponent implements OnInit {
   yScale: any;
   xAxis: any;
   yAxis: any;
+  yAxisScale: any;
   transitionTime: 1500;
 
   ngOnInit() {
@@ -144,8 +145,6 @@ export class AppComponent implements OnInit {
   createScale(): void {
     // x-scale
     this.xScale = d3
-      /* .scaleBand() */
-      /* .domain(this.graphData.map((d: any) => d.hrCount)) */
       .scaleLinear()
       .domain([0, d3.max(this.graphData, (d: any) => d.hrCount)])
       .range([0, this.width]);
@@ -153,7 +152,10 @@ export class AppComponent implements OnInit {
     // y-scale
     this.yScale = d3
       .scaleLinear()
-      .domain([0, this.maxAllowed])
+      .domain([
+        Math.min(...this.graphData.map((d) => d.adjCount)),
+        this.maxAllowed,
+      ])
       .range([this.height, 0]);
   }
 
@@ -163,7 +165,9 @@ export class AppComponent implements OnInit {
       .attr('class', 'y-axis-grid')
       .call(
         d3.axisLeft(this.yScale).tickSize(-this.width).tickFormat('').ticks(2)
-      )
+      );
+    this.g.select('.domain').style('stroke', 'none');
+    this.g
       .selectAll('line')
       .style('stroke', 'red')
       .style('stroke-dasharray', '4');
@@ -223,18 +227,20 @@ export class AppComponent implements OnInit {
 
   createAxis(): void {
     // x-axis
-    /* const xJump = 10;
+    const xJump = 15;
     const xMax = Math.max(...this.graphData.map((d) => d.hrCount));
-    let xRange = []; */
-    /* for (let i = 0; i < xMax; i++) {
-      xRange.push(i);
-    } */
-    /* if (xMax !== xRange[-1]) xRange.push(xMax); */
+    let xRange = [];
+    for (let i = 0; i <= xMax; i += xJump) {
+      if (i < xMax - 4) {
+        xRange.push(i);
+      }
+    }
+    xRange.push(xMax);
 
     this.xAxis = d3
       .axisBottom(this.xScale)
-      /* .tickValues([0, 25, 50, 75, 100]) */
-      .ticks(3)
+      .tickValues(xRange)
+      /* .ticks(3) */
       .tickSizeOuter(0);
     this.g
       .append('g')
