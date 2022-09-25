@@ -15,15 +15,15 @@ export class AppComponent implements OnInit {
     },
     {
       hrCount: 4,
-      adjCount: -2,
+      adjCount: -4,
     },
     {
       hrCount: 8,
-      adjCount: -5,
+      adjCount: -3,
     },
     {
       hrCount: 12,
-      adjCount: -10,
+      adjCount: -5,
     },
     {
       hrCount: 16,
@@ -70,7 +70,7 @@ export class AppComponent implements OnInit {
       adjCount: 50,
     },
     {
-      hrCount: 60,
+      hrCount: 58,
       adjCount: 53,
     },
   ];
@@ -116,9 +116,10 @@ export class AppComponent implements OnInit {
     this.createGroup();
     this.createScale();
     this.createYAxisGridLine();
+    this.createXAxisGridLine();
     this.createShadowEffect();
     this.createAxis();
-    this.createDataPathAndDots();
+    this.createDataPath();
 
     // Removing y-axis 0 tick-line
     d3.selectAll('.y-axis-tick .tick line').each(function (d, i) {
@@ -153,22 +154,54 @@ export class AppComponent implements OnInit {
     this.yScale = d3
       .scaleLinear()
       .domain([
-        Math.min(...this.graphData.map((d) => d.adjCount)),
-        this.maxAllowed,
+        Math.min(0, ...this.graphData.map((d) => d.adjCount)),
+        Math.max(...this.graphData.map((d) => d.adjCount)),
       ])
       .range([this.height, 0]);
   }
 
   createYAxisGridLine(): void {
+    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
+    const yNumSteps = 3;
+    const yStep = Math.ceil(yMax / yNumSteps);
+    const ySteps = [yStep, yStep * 2, yMax];
+
     this.g
       .append('g')
       .attr('class', 'y-axis-grid')
       .call(
-        d3.axisLeft(this.yScale).tickSize(-this.width).tickFormat('').ticks(2)
+        d3
+          .axisLeft(this.yScale)
+          .tickSize(-this.width)
+          .tickFormat('')
+          .tickValues(ySteps)
       );
-    this.g.select('.domain').style('stroke', 'none');
+    this.g.select('.domain').remove();
     this.g
-      .selectAll('line')
+      .selectAll('.tick line')
+      .style('stroke', 'red')
+      .style('stroke-dasharray', '4');
+  }
+
+  createXAxisGridLine(): void {
+    const xMax = Math.max(...this.graphData.map((d) => d.hrCount));
+    const xNumSteps = 4;
+    const xStep = Math.ceil(xMax / xNumSteps);
+    const xSteps = [xStep, xStep * 2, xStep * 3, xMax];
+
+    this.g
+      .append('g')
+      .attr('class', 'x-axis-grid')
+      .call(
+        d3
+          .axisBottom(this.xScale)
+          .tickSize(this.height)
+          .tickFormat('')
+          .tickValues(xSteps)
+      );
+    this.g.select('.domain').remove();
+    this.g
+      .selectAll('.tick line')
       .style('stroke', 'red')
       .style('stroke-dasharray', '4');
   }
@@ -202,11 +235,27 @@ export class AppComponent implements OnInit {
       .attr('offset', (d: any, i: any) => {
         return 100 * (i / 2) + '%';
       });
+    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
+    const yMin = Math.min(...this.graphData.map((d) => d.adjCount));
+    const zero = (this.height / (yMax - Math.min(0, yMin))) * yMax;
     const area = d3
       .area()
-      .y0(this.height)
-      .y1((d: any) => d.y)
-      .x((d: any) => d.x);
+      .y0((d: any) => {
+        if (d.y <= zero) {
+          return d.y;
+        } else {
+          return zero;
+        }
+      })
+      .y1((d: any) => {
+        if (d.y <= zero) {
+          return zero;
+        } else {
+          return d.y;
+        }
+      })
+      .x((d: any) => d.x)
+      .curve(d3.curveCardinal.tension(0.5));
 
     this.g
       .append('path')
@@ -226,38 +275,13 @@ export class AppComponent implements OnInit {
   }
 
   createAxis(): void {
-    // x-axis
-    const xJump = 15;
-    const xMax = Math.max(...this.graphData.map((d) => d.hrCount));
-    let xRange = [];
-    for (let i = 0; i <= xMax; i += xJump) {
-      if (i < xMax - 4) {
-        xRange.push(i);
-      }
-    }
-    xRange.push(xMax);
-
-    this.xAxis = d3
-      .axisBottom(this.xScale)
-      .tickValues(xRange)
-      /* .ticks(3) */
-      .tickSizeOuter(0);
-    this.g
-      .append('g')
-      .attr('transform', 'translate(0, ' + this.height + ')')
-      .attr('class', 'graph-axis')
-      .call(this.xAxis.scale(this.xScale))
-      .append('text')
-      .attr('x', this.width)
-      .attr('y', -6)
-      .attr('text-anchor', 'end')
-      .attr('font', '10px sans-serif')
-      .attr('letter-spacing', '1px')
-      .attr('fill', '#8997b1')
-      .text('Hours');
-
     // y-axis
-    this.yAxis = d3.axisLeft(this.yScale).ticks(3).tickSizeOuter(0);
+    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
+    const yNumSteps = 3;
+    const yStep = Math.ceil(yMax / yNumSteps);
+    const ySteps = [0, yStep, yStep * 2, yMax];
+
+    this.yAxis = d3.axisLeft(this.yScale).tickValues(ySteps);
     this.g
       .append('g')
       .attr('class', 'graph-axis')
@@ -271,14 +295,37 @@ export class AppComponent implements OnInit {
       .attr('letter-spacing', '1px')
       .attr('fill', '#8997b1')
       .text('Adjusters');
+
+    // x-axis
+    const xMax = Math.max(...this.graphData.map((d) => d.hrCount));
+    const yMin = Math.min(...this.graphData.map((d) => d.adjCount));
+    const xNumSteps = 4;
+    const xStep = Math.ceil(xMax / xNumSteps);
+    const xSteps = [xStep, xStep * 2, xStep * 3, xMax];
+    const translate = (this.height / (yMax - Math.min(0, yMin))) * yMax;
+
+    this.xAxis = d3.axisBottom(this.xScale).tickValues(xSteps);
+    this.g
+      .append('g')
+      .attr('transform', 'translate(0, ' + translate + ')')
+      .attr('class', 'graph-axis')
+      .call(this.xAxis.scale(this.xScale))
+      .append('text')
+      .attr('x', this.width)
+      .attr('y', -6)
+      .attr('text-anchor', 'end')
+      .attr('font', '10px sans-serif')
+      .attr('letter-spacing', '1px')
+      .attr('fill', '#8997b1')
+      .text('Hours');
   }
 
-  createDataPathAndDots(): void {
+  createDataPath(): void {
     const line = d3
       .line()
       .x((d: any) => this.xScale(d.hrCount))
-      /* .x((d: any) => this.xScale(d.hrCount) + this.xScale.bandwidth() / 2) */
-      .y((d: any) => this.yScale(d.adjCount));
+      .y((d: any) => this.yScale(d.adjCount))
+      .curve(d3.curveCardinal.tension(0.5));
     const path = this.g
       .append('path')
       .attr('class', 'line')
