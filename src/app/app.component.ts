@@ -15,15 +15,15 @@ export class AppComponent implements OnInit {
     },
     {
       hrCount: 4,
-      adjCount: -4,
+      adjCount: -2,
     },
     {
       hrCount: 8,
-      adjCount: -3,
+      adjCount: -8,
     },
     {
       hrCount: 12,
-      adjCount: -5,
+      adjCount: -10,
     },
     {
       hrCount: 16,
@@ -90,18 +90,21 @@ export class AppComponent implements OnInit {
   yAxisScale: any;
   transitionTime: 1500;
 
-  ngOnInit() {
-    this.maxAllowed = d3.max(this.graphData, (d: any) => d.hrCount);
-    this.drawLineGraph();
-  }
-
-  drawLineGraph() {
+  constructor() {
     this.margin = {
       top: 5,
       right: 10,
       bottom: 20,
       left: 25,
     };
+  }
+
+  ngOnInit() {
+    this.maxAllowed = d3.max(this.graphData, (d: any) => d.hrCount);
+    this.drawLineGraph();
+  }
+
+  drawLineGraph() {
     this.width =
       document.getElementById('svgcontainer').parentElement.offsetWidth -
       (this.margin.left + this.margin.right);
@@ -207,20 +210,26 @@ export class AppComponent implements OnInit {
   }
 
   createShadowEffect(): void {
+    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
+    const yMin = Math.min(...this.graphData.map((d) => d.adjCount));
+    const zero = (this.height / (yMax - Math.min(0, yMin))) * yMax;
+    const zeroLinePercent = zero / this.height;
     const colorArray = [
-      ['rgb(8, 141, 218)', '0.8'],
-      ['rgb(8, 141, 218)', '0.5'],
-      ['rgb(8, 141, 218)', '0.2'],
+      ['rgb(8, 141, 218)', '0.8', 0],
+      ['rgb(8, 141, 218)', '0.5', zeroLinePercent / 2],
+      ['rgb(8, 141, 218)', '0.2', zeroLinePercent],
+      ['rgb(255, 64, 34)', '0.2', zeroLinePercent],
+      ['rgb(255, 64, 34)', '0.5', (1 - zeroLinePercent) / 2 + zeroLinePercent],
+      ['rgb(255, 64, 34)', '0.8', 1],
     ];
     const defs = this.g.append('defs');
     const grad = defs
       .append('linearGradient')
-      .attr('id', 'grad')
+      .attr('id', 'areaGradient')
       .attr('x1', '0%')
       .attr('x2', '0%')
       .attr('y1', '0%')
-      .attr('y2', '100%')
-      .attr('gradientTransform', 'rotate(-15)');
+      .attr('y2', '100%');
     grad
       .selectAll('stop')
       .data(colorArray)
@@ -233,11 +242,8 @@ export class AppComponent implements OnInit {
         return d[1];
       })
       .attr('offset', (d: any, i: any) => {
-        return 100 * (i / 2) + '%';
+        return d[2] * 100 + '%';
       });
-    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
-    const yMin = Math.min(...this.graphData.map((d) => d.adjCount));
-    const zero = (this.height / (yMax - Math.min(0, yMin))) * yMax;
     const area = d3
       .area()
       .y0((d: any) => {
@@ -259,7 +265,7 @@ export class AppComponent implements OnInit {
 
     this.g
       .append('path')
-      .attr('fill', 'url(#grad)')
+      .attr('fill', 'url(#areaGradient)')
       .transition()
       .duration(1500)
       .attrTween('d', function (d) {
@@ -321,6 +327,35 @@ export class AppComponent implements OnInit {
   }
 
   createDataPath(): void {
+    const yMax = Math.max(...this.graphData.map((d) => d.adjCount));
+    const yMin = Math.min(...this.graphData.map((d) => d.adjCount));
+    const zero = (this.height / (yMax - Math.min(0, yMin))) * yMax;
+    const zeroLinePercent = zero / this.height;
+    const colorArray = [
+      ['rgb(8, 141, 218)', 0],
+      ['rgb(8, 141, 218)', zeroLinePercent],
+      ['rgb(255, 64, 34)', zeroLinePercent],
+      ['rgb(255, 64, 34)', 1],
+    ];
+    const defs = this.g.append('defs');
+    const grad = defs
+      .append('linearGradient')
+      .attr('id', 'lineGradient')
+      .attr('x1', '0%')
+      .attr('x2', '0%')
+      .attr('y1', '0%')
+      .attr('y2', '100%');
+    grad
+      .selectAll('stop')
+      .data(colorArray)
+      .enter()
+      .append('stop')
+      .style('stop-color', (d: any) => {
+        return d[0];
+      })
+      .attr('offset', (d: any, i: any) => {
+        return d[1] * 100 + '%';
+      });
     const line = d3
       .line()
       .x((d: any) => this.xScale(d.hrCount))
@@ -330,7 +365,7 @@ export class AppComponent implements OnInit {
       .append('path')
       .attr('class', 'line')
       .attr('fill', 'none')
-      .attr('stroke', '#088dda')
+      .attr('stroke', 'url(#lineGradient)')
       .attr('stroke-width', '2px')
       .attr('d', line(this.graphData));
 
